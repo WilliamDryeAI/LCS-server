@@ -81,6 +81,14 @@ io.on('connection', socket => {
     broadcastRoom(room);
   });
 
+  socket.on('move', data => {
+    const room = getRoomOf(socket.id);
+    if (!room || !room.started) return;
+    room.players.forEach(p => {
+      if (p.id !== socket.id) io.to(p.id).emit('player_moved', { id:socket.id, ...data });
+    });
+  });
+
   socket.on('leave_room', () => {
     console.log(`[ROOM] ${socket.id} left`);
     removeFromRoom(socket.id);
