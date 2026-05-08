@@ -44,10 +44,16 @@ function broadcastRoom(room) {
 function removeFromRoom(socketId) {
   const room = getRoomOf(socketId);
   if (!room) return;
+  if (room.alive) room.alive.delete(socketId);
   room.players = room.players.filter(p => p.id !== socketId);
   if (room.players.length === 0) { delete rooms[room.code]; return; }
   if (room.host === socketId) room.host = room.players[0].id;
   broadcastRoom(room);
+  // If game running and only one human left, declare winner
+  if (room.started && room.alive && room.alive.size === 1) {
+    const winnerId = [...room.alive][0];
+    io.to(winnerId).emit('game_won');
+  }
 }
 
 io.on('connection', socket => {
@@ -115,12 +121,33 @@ io.on('connection', socket => {
     if (!room || room.host !== socket.id) return;
     if (!room.players.every(p => p.ready)) return;
     room.started = true;
+    room.alive = new Set(room.players.map(p => p.id));
     console.log(`[ROOM] ${room.code} game started`);
     room.players.forEach(p =>
       io.to(p.id).emit('game_start', {
         players: room.players.map(pl => ({ id:pl.id, name:pl.name, charId:pl.charId }))
       })
     );
+  });
+
+  // ── combat events ─────────────────────────────────────
+
+  socket.on('hit_player', ({ targetId, damage }) => {
+    io.to(targetId).emit('you_were_hit', { damage });
+  });
+
+  socket.on('player_eliminated', () => {
+    const room = getRoomOf(socket.id);
+    if (!room || !room.started) return;
+    if (!room.alive) room.alive = new Set(room.players.map(p => p.id));
+    room.alive.delete(socket.id);
+    console.log(`[ROOM] ${socket.id} eliminated  (${room.alive.size} alive)`);
+    room.players.forEach(p => io.to(p.id).emit('player_died', { id: socket.id }));
+    if (room.alive.size === 1) {
+      const winnerId = [...room.alive][0];
+      console.log(`[ROOM] ${room.code} winner: ${winnerId}`);
+      io.to(winnerId).emit('game_won');
+    }
   });
 
   // ── disconnect ────────────────────────────────────────
