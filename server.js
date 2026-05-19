@@ -134,8 +134,8 @@ io.on('connection', socket => {
 
   // ── combat events ─────────────────────────────────────
 
-  socket.on('hit_player', ({ targetId, damage, slow }) => {
-    io.to(targetId).emit('you_were_hit', { damage, slow });
+  socket.on('hit_player', ({ targetId, damage, slow, killerId }) => {
+    io.to(targetId).emit('you_were_hit', { damage, slow, killerId });
   });
 
   // ── bot sync (host-authority) ──────────────────────────
@@ -170,13 +170,13 @@ io.on('connection', socket => {
     room.players.forEach(p => { if (p.id !== socket.id) io.to(p.id).emit('fire_zone', data); });
   });
 
-  socket.on('player_eliminated', () => {
+  socket.on('player_eliminated', ({ killerId } = {}) => {
     const room = getRoomOf(socket.id);
     if (!room || !room.started) return;
     if (!room.alive) room.alive = new Set(room.players.map(p => p.id));
     room.alive.delete(socket.id);
     console.log(`[ROOM] ${socket.id} eliminated  (${room.alive.size} alive)`);
-    room.players.forEach(p => io.to(p.id).emit('player_died', { id: socket.id }));
+    room.players.forEach(p => io.to(p.id).emit('player_died', { id: socket.id, killerId: killerId || null }));
     if (room.alive.size === 1) {
       const winnerId = [...room.alive][0];
       console.log(`[ROOM] ${room.code} winner: ${winnerId}`);
