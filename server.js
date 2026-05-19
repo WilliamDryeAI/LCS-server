@@ -122,10 +122,12 @@ io.on('connection', socket => {
     if (!room.players.every(p => p.ready)) return;
     room.started = true;
     room.alive = new Set(room.players.map(p => p.id));
-    console.log(`[ROOM] ${room.code} game started`);
+    const mapTheme = Math.random() < 0.5 ? 'forest' : 'desert';
+    console.log(`[ROOM] ${room.code} game started (${mapTheme})`);
     room.players.forEach(p =>
       io.to(p.id).emit('game_start', {
-        players: room.players.map(pl => ({ id:pl.id, name:pl.name, charId:pl.charId }))
+        players: room.players.map(pl => ({ id:pl.id, name:pl.name, charId:pl.charId })),
+        mapTheme
       })
     );
   });
