@@ -138,6 +138,38 @@ io.on('connection', socket => {
     io.to(targetId).emit('you_were_hit', { damage });
   });
 
+  // ── bot sync (host-authority) ──────────────────────────
+
+  socket.on('bot_spawn', data => {
+    const room = getRoomOf(socket.id);
+    if (!room || room.host !== socket.id) return;
+    room.players.forEach(p => { if (p.id !== socket.id) io.to(p.id).emit('bot_spawn', data); });
+  });
+
+  socket.on('bot_update', data => {
+    const room = getRoomOf(socket.id);
+    if (!room) return;
+    room.players.forEach(p => { if (p.id !== socket.id) io.to(p.id).emit('bot_update', data); });
+  });
+
+  socket.on('bot_hit', data => {
+    const room = getRoomOf(socket.id);
+    if (!room) return;
+    io.to(room.host).emit('bot_hit', data);
+  });
+
+  socket.on('bot_died', data => {
+    const room = getRoomOf(socket.id);
+    if (!room || room.host !== socket.id) return;
+    room.players.forEach(p => { if (p.id !== socket.id) io.to(p.id).emit('bot_died', data); });
+  });
+
+  socket.on('fire_zone', data => {
+    const room = getRoomOf(socket.id);
+    if (!room) return;
+    room.players.forEach(p => { if (p.id !== socket.id) io.to(p.id).emit('fire_zone', data); });
+  });
+
   socket.on('player_eliminated', () => {
     const room = getRoomOf(socket.id);
     if (!room || !room.started) return;
