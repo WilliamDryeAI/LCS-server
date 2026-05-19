@@ -134,8 +134,8 @@ io.on('connection', socket => {
 
   // ── combat events ─────────────────────────────────────
 
-  socket.on('hit_player', ({ targetId, damage }) => {
-    io.to(targetId).emit('you_were_hit', { damage });
+  socket.on('hit_player', ({ targetId, damage, slow }) => {
+    io.to(targetId).emit('you_were_hit', { damage, slow });
   });
 
   // ── bot sync (host-authority) ──────────────────────────
